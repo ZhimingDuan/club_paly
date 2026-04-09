@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Statistic, DatePicker, message, Typography } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import { Card, Statistic, DatePicker, message, Typography, Grid } from 'antd';
 import { reportApi } from '@/services/api';
 import { ReportParams } from '@/types';
 import { BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -10,9 +9,11 @@ const { Title } = Typography;
 const money = (v: number) => `¥${Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const Dashboard: React.FC = () => {
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const [dateRange, setDateRange] = useState<[string, string]>([
     new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
-    new Date().toISOString()
+    new Date(new Date().setHours(23, 59, 59, 999)).toISOString()
   ]);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState({
@@ -57,23 +58,23 @@ const Dashboard: React.FC = () => {
   const handleDateChange = (dates: any) => {
     if (dates) {
       setDateRange([
-        dates[0].toISOString(),
-        dates[1].toISOString()
+        dates[0].startOf('day').toISOString(),
+        dates[1].endOf('day').toISOString()
       ]);
     }
   };
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={4}>俱乐部收益</Title>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 24 }}>
+        <Title level={4}>俱乐部流水与分成</Title>
         <RangePicker onChange={handleDateChange} />
       </div>
       
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
         <Card loading={loading}>
           <Statistic
-            title="俱乐部收益(抽成)"
+            title="流水（总收款）"
             value={summary.total_income}
             precision={2}
             valueStyle={{ color: '#52c41a' }}
@@ -83,7 +84,7 @@ const Dashboard: React.FC = () => {
         </Card>
         <Card loading={loading}>
           <Statistic
-            title="总支出"
+            title="总佣金支出"
             value={summary.total_expense}
             precision={2}
             valueStyle={{ color: '#ff4d4f' }}
@@ -93,19 +94,18 @@ const Dashboard: React.FC = () => {
         </Card>
         <Card loading={loading}>
           <Statistic
-            title="净利润"
+            title="净利润（俱乐部分成）"
             value={summary.net_profit}
             precision={2}
             valueStyle={{ color: summary.net_profit >= 0 ? '#52c41a' : '#ff4d4f' }}
             prefix="¥"
             suffix="元"
-            valueSymbol={summary.net_profit >= 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
           />
         </Card>
       </div>
       
       <Card style={{ marginTop: 24 }} loading={loading}>
-        <Title level={5}>收益趋势</Title>
+        <Title level={5}>流水/支出/分成趋势</Title>
         <div style={{ height: 400 }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -135,12 +135,12 @@ const Dashboard: React.FC = () => {
                 labelStyle={{ color: '#415472', fontWeight: 600 }}
               />
               <Legend />
-              <Bar dataKey="income" name="俱乐部收益(抽成)" fill="url(#incomeGradient)" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="expense" name="总支出" fill="url(#expenseGradient)" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="income" name="流水（总收款）" fill="url(#incomeGradient)" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="expense" name="总佣金支出" fill="url(#expenseGradient)" radius={[8, 8, 0, 0]} />
               <Line
                 type="monotone"
                 dataKey="profit"
-                name="净利润"
+                name="净利润（俱乐部分成）"
                 stroke="#2e8a5c"
                 strokeWidth={3}
                 dot={{ r: 3, fill: '#2e8a5c', stroke: '#fff', strokeWidth: 2 }}

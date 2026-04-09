@@ -93,10 +93,10 @@ export const itemApi = {
   getItems: async (): Promise<Item[]> => {
     return api.get('/items/');
   },
-  createItem: async (item: { item_name: string; unit_qty: number; unit_price: number }): Promise<Item> => {
+  createItem: async (item: { item_name: string; unit_qty: number; unit_price: number; is_commissioned: boolean }): Promise<Item> => {
     return api.post('/items/', item);
   },
-  updateItem: async (id: number, item: { item_name?: string; unit_qty?: number; unit_price?: number }): Promise<Item> => {
+  updateItem: async (id: number, item: { item_name?: string; unit_qty?: number; unit_price?: number; is_commissioned?: boolean }): Promise<Item> => {
     return api.put(`/items/${id}`, item);
   },
   deleteItem: async (id: number): Promise<{ message: string }> => {
@@ -115,7 +115,7 @@ export const orderApi = {
     remarks: string | null;
     order_items: Array<{
       item_id: number;
-      target_qty: number;
+      target_qty: number | string;
       premium_rate: number;
     }>;
   }): Promise<Order> => {
@@ -150,7 +150,7 @@ export const settlementApi = {
     worker_id: number;
     settlement_items: Array<{
       item_id: number;
-      submit_qty: number;
+      submit_qty: number | string;
     }>;
   }): Promise<Settlement> => {
     return api.post('/settlements/', settlement);

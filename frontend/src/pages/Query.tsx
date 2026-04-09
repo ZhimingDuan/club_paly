@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Card, DatePicker, Input, Select, Space, Table, Typography, message, Button, Statistic } from 'antd';
+import { Card, DatePicker, Input, Select, Space, Table, Typography, message, Button, Statistic, Grid } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { settlementApi } from '@/services/api';
 import { Settlement } from '@/types';
@@ -47,6 +47,8 @@ type SettlementRow = {
 };
 
 const Query: React.FC = () => {
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -185,7 +187,7 @@ const Query: React.FC = () => {
               placeholder="输入关键字"
               value={bossKeyword}
               onChange={(e) => setBossKeyword(e.target.value)}
-              style={{ width: 220 }}
+              style={{ width: isMobile ? '100%' : 220 }}
               allowClear
             />
           </div>
@@ -196,14 +198,14 @@ const Query: React.FC = () => {
               placeholder="输入物资关键字"
               value={itemKeyword}
               onChange={(e) => setItemKeyword(e.target.value)}
-              style={{ width: 220 }}
+              style={{ width: isMobile ? '100%' : 220 }}
               allowClear
             />
           </div>
 
           <div>
             <div style={{ color: '#666', marginBottom: 6 }}>打手</div>
-            <Select value={workerId} onChange={(v) => setWorkerId(v)} style={{ width: 200 }}>
+            <Select value={workerId} onChange={(v) => setWorkerId(v)} style={{ width: isMobile ? '100%' : 200 }}>
               <Option value="all">全部</Option>
               {workerOptions.map((w) => (
                 <Option key={w.id} value={w.id}>
@@ -224,13 +226,13 @@ const Query: React.FC = () => {
             />
           </div>
 
-          <div style={{ marginLeft: 'auto', color: '#666' }}>
+          <div style={{ marginLeft: isMobile ? 0 : 'auto', color: '#666' }}>
             共 <b>{filtered.length}</b> 条
           </div>
         </Space>
       </Card>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
         <Card>
           <Statistic title="打手结算金额合计" value={summary.totalWorkerPay} precision={2} formatter={(v) => money(Number(v || 0))} />
         </Card>
@@ -243,14 +245,36 @@ const Query: React.FC = () => {
       </div>
 
       <Card>
-        <Table
-          columns={columns as any}
-          dataSource={filtered}
-          rowKey="row_id"
-          loading={loading}
-          pagination={{ pageSize: 10, showSizeChanger: true }}
-          scroll={{ x: 1300 }}
-        />
+        {!isMobile ? (
+          <Table
+            columns={columns as any}
+            dataSource={filtered}
+            rowKey="row_id"
+            loading={loading}
+            pagination={{ pageSize: 10, showSizeChanger: true }}
+            scroll={{ x: 1300 }}
+          />
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {filtered.map((r) => (
+              <Card key={r.row_id} size="small" style={{ borderRadius: 10 }}>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>{r.item_name} / {r.worker_name}</div>
+                <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>
+                  结算 {formatBizId(r.settlement_id, r.settlement_time)} · 订单 {formatBizId(r.order_id, r.order_create_time)}
+                </div>
+                <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+                  老板：{r.boss_name} · 时间：{zhDateTime(r.settlement_time)}
+                </div>
+                <div style={{ fontSize: 13 }}>
+                  数量 {r.submit_qty} ｜ 总价值 {money(r.total_value)}
+                </div>
+                <div style={{ fontSize: 13 }}>
+                  打手结算 {money(r.worker_pay)} ｜ 俱乐部分成 {money(r.club_cut)}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   );

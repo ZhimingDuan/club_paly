@@ -16,12 +16,12 @@ def _beijing_now() -> datetime:
     return datetime.now(timezone(timedelta(hours=8)))
 
 def _to_beijing(dt: datetime | None) -> datetime | None:
-    """统一把时间转换为北京时间；历史无时区数据按 UTC 处理。"""
+    """统一把时间转换为北京时间；历史无时区数据按北京时间本地值解释。"""
     if dt is None:
         return None
     bj_tz = timezone(timedelta(hours=8))
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc).astimezone(bj_tz)
+        return dt.replace(tzinfo=bj_tz)
     return dt.astimezone(bj_tz)
 
 def _attach_delivered_qty(orders: List[Order], db: Session) -> None:

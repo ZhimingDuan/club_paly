@@ -5,7 +5,8 @@ import { workerApi, itemApi, userApi } from '@/services/api';
 import { Worker, Item, User, RoleEnum } from '@/types';
 import { usePermission } from '@/store/useStore';
 
-const { Title, TabPane } = Typography;
+const { Title } = Typography;
+const { TabPane } = Tabs;
 
 const Settings: React.FC = () => {
   const CLERK_PERMISSION_OPTIONS = [
@@ -110,6 +111,7 @@ const Settings: React.FC = () => {
   const handleAddItem = () => {
     setEditingItem(null);
     form.resetFields();
+    form.setFieldsValue({ is_commissioned: true });
     setModalVisible(true);
   };
 
@@ -119,7 +121,8 @@ const Settings: React.FC = () => {
     form.setFieldsValue({
       item_name: item.item_name,
       unit_qty: item.unit_qty,
-      unit_price: item.unit_price
+      unit_price: item.unit_price,
+      is_commissioned: item.is_commissioned,
     });
     setModalVisible(true);
   };
@@ -290,6 +293,12 @@ const Settings: React.FC = () => {
       render: (price: number) => `¥${price}`,
     },
     {
+      title: '分成',
+      dataIndex: 'is_commissioned',
+      key: 'is_commissioned',
+      render: (v: boolean) => (v ? '参与分成' : '不分成(全额给打手)'),
+    },
+    {
       title: '操作',
       key: 'action',
       render: (_: any, record: Item) => (
@@ -382,6 +391,7 @@ const Settings: React.FC = () => {
               rowKey="id" 
               loading={loading}
               pagination={{ pageSize: 10 }}
+              scroll={{ x: 700 }}
             />
           </Card>
         </TabPane>
@@ -398,6 +408,7 @@ const Settings: React.FC = () => {
               rowKey="id" 
               loading={loading}
               pagination={{ pageSize: 10 }}
+              scroll={{ x: 900 }}
             />
           </Card>
         </TabPane>
@@ -415,6 +426,7 @@ const Settings: React.FC = () => {
                 rowKey="id" 
                 loading={loading}
                 pagination={{ pageSize: 10 }}
+                scroll={{ x: 980 }}
               />
             </Card>
           </TabPane>
@@ -493,6 +505,14 @@ const Settings: React.FC = () => {
                   step={0.01}
                   style={{ width: '100%' }}
                 />
+              </Form.Item>
+              <Form.Item
+                name="is_commissioned"
+                label="是否参与分成"
+                valuePropName="checked"
+                initialValue={true}
+              >
+                <Switch checkedChildren="参与分成" unCheckedChildren="不分成" />
               </Form.Item>
             </>
           ) : (

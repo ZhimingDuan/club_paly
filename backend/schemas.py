@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 
 # 角色枚举
 class RoleEnum(str, Enum):
@@ -71,6 +71,7 @@ class ItemBase(BaseModel):
     item_name: str
     unit_qty: float = Field(..., gt=0)
     unit_price: float = Field(..., gt=0)
+    is_commissioned: bool = True
 
 class ItemCreate(ItemBase):
     pass
@@ -79,6 +80,7 @@ class ItemUpdate(BaseModel):
     item_name: Optional[str] = None
     unit_qty: Optional[float] = Field(None, gt=0)
     unit_price: Optional[float] = Field(None, gt=0)
+    is_commissioned: Optional[bool] = None
 
 class Item(ItemBase):
     id: int
@@ -89,14 +91,14 @@ class Item(ItemBase):
 # 订单物资副表相关模型
 class OrderItemBase(BaseModel):
     item_id: int
-    target_qty: float = Field(..., gt=0)
+    target_qty: Union[float, str]
     premium_rate: float = Field(1.0, ge=0)
 
 class OrderItemCreate(OrderItemBase):
     pass
 
 class OrderItemUpdate(BaseModel):
-    target_qty: Optional[float] = Field(None, gt=0)
+    target_qty: Optional[Union[float, str]] = None
     premium_rate: Optional[float] = Field(None, ge=0)
 
 class OrderItem(OrderItemBase):
@@ -136,7 +138,7 @@ class Order(OrderBase):
 # 结算物资副表相关模型
 class SettlementItemBase(BaseModel):
     item_id: int
-    submit_qty: float = Field(..., gt=0)
+    submit_qty: Union[float, str]
 
 class SettlementItemCreate(SettlementItemBase):
     pass

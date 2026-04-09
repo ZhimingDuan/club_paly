@@ -46,6 +46,7 @@ class Item(Base):
     item_name = Column(String, nullable=False)
     unit_qty = Column(Float, nullable=False)  # 单位数量
     unit_price = Column(Float, nullable=False)  # 单价
+    is_commissioned = Column(Boolean, nullable=False, default=True)  # 是否参与俱乐部分成
     
     # 关联关系
     order_items = relationship("OrderItem", back_populates="item")

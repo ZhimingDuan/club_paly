@@ -1,6 +1,17 @@
-import React, { useEffect } from 'react';
-import { Layout, Menu, Button, Badge, Typography } from 'antd';
-import { LogoutOutlined, HomeOutlined, OrderedListOutlined, DollarOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons';
+import React, { useEffect, useState } from 'react';
+import { Layout, Menu, Button, Typography, Drawer, Grid } from 'antd';
+import {
+  LogoutOutlined,
+  HomeOutlined,
+  OrderedListOutlined,
+  DollarOutlined,
+  SearchOutlined,
+  SettingOutlined,
+  ThunderboltOutlined,
+  CrownOutlined,
+  UserOutlined,
+  MenuOutlined,
+} from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore, usePermission } from '@/store/useStore';
 import { userApi } from '@/services/api';
@@ -17,6 +28,9 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
   const { hasPermission } = usePermission();
   const navigate = useNavigate();
   const location = useLocation();
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 获取当前用户信息
   useEffect(() => {
@@ -46,31 +60,31 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
   const menuItems = [
     {
       key: '/',
-      icon: <HomeOutlined />,
+      icon: <HomeOutlined className="menu-ico" />,
       label: '俱乐部收益',
       perm: 'dashboard_view',
     },
     {
       key: '/orders',
-      icon: <OrderedListOutlined />,
+      icon: <OrderedListOutlined className="menu-ico" />,
       label: '订单管理',
       perm: 'orders_manage',
     },
     {
       key: '/settlement',
-      icon: <DollarOutlined />,
+      icon: <DollarOutlined className="menu-ico" />,
       label: '打手结算',
       perm: 'settlement_manage',
     },
     {
       key: '/query',
-      icon: <SearchOutlined />,
+      icon: <SearchOutlined className="menu-ico" />,
       label: '明细查询',
       perm: 'query_view',
     },
     {
       key: '/settings',
-      icon: <SettingOutlined />,
+      icon: <SettingOutlined className="menu-ico" />,
       label: '基础设置',
       perm: 'settings_manage',
     },
@@ -80,45 +94,94 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
     return location.pathname || '/';
   };
 
+  const handleMenuClick = (key: string) => {
+    navigate(key);
+    if (isMobile) setMobileMenuOpen(false);
+  };
+
   return (
     <Layout className="app-shell" style={{ minHeight: '100vh' }}>
       <Header className="app-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Title level={4} style={{ color: 'white', margin: 0 }}>爆肝电竞俱乐部</Title>
+        {isMobile ? (
+          <Button
+            className="header-menu-btn"
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={() => setMobileMenuOpen(true)}
+          />
+        ) : null}
+        <div className="brand-wrap">
+          <div className="brand-logo">
+            <ThunderboltOutlined />
+          </div>
+          <Title level={isMobile ? 5 : 4} style={{ color: 'white', margin: 0 }}>爆肝电竞俱乐部</Title>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', color: 'white' }}>
           {user && (
             <>
-              <span style={{ marginRight: 16 }}>
-                {user.username} ({user.role === 'admin' ? '管理员' : '登记员'})
-              </span>
+              {!isMobile ? (
+                <span className="user-chip" style={{ marginRight: 16 }}>
+                  {user.role === 'admin' ? <CrownOutlined /> : <UserOutlined />}
+                  <span>{user.username} ({user.role === 'admin' ? '管理员' : '登记员'})</span>
+                </span>
+              ) : null}
               <Button 
+                className="header-logout-btn"
                 type="text" 
                 icon={<LogoutOutlined />} 
                 style={{ color: 'white' }} 
                 onClick={handleLogout}
               >
-                退出登录
+                {!isMobile ? '退出登录' : ''}
               </Button>
             </>
           )}
         </div>
       </Header>
       <Layout>
-        <Sider className="app-sider" width={220} style={{ background: '#fff' }}>
-          <Menu
-            mode="inline"
-            selectedKeys={[getSelectedKey()]}
-            style={{ height: '100%', borderRight: 0 }}
-            items={menuItems}
-            onClick={({ key }) => {
-              console.log('菜单被点击，key:', key);
-              navigate(key);
-            }}
-          />
-        </Sider>
-        <Content className="app-content" style={{ margin: '24px 16px', padding: 24, background: '#fff', minHeight: 280 }}>
+        {!isMobile ? (
+          <Sider className="app-sider" width={220} style={{ background: '#fff' }}>
+            <Menu
+              mode="inline"
+              selectedKeys={[getSelectedKey()]}
+              style={{ height: '100%', borderRight: 0 }}
+              items={menuItems}
+              onClick={({ key }) => {
+                console.log('菜单被点击，key:', key);
+                handleMenuClick(key);
+              }}
+            />
+          </Sider>
+        ) : null}
+        <Content className="app-content" style={{ margin: isMobile ? '12px 8px' : '24px 16px', padding: isMobile ? 12 : 24, background: '#fff', minHeight: 280 }}>
           {children}
         </Content>
       </Layout>
+
+      <Drawer
+        title="导航菜单"
+        placement="left"
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        width={250}
+        bodyStyle={{ padding: 8 }}
+      >
+        {user ? (
+          <div className="mobile-user-row">
+            <span className="user-chip">
+                {user.role === 'admin' ? <CrownOutlined /> : <UserOutlined />}
+                <span>{user.username} ({user.role === 'admin' ? '管理员' : '登记员'})</span>
+              </span>
+            <Button size="small" onClick={handleLogout} icon={<LogoutOutlined />}>退出</Button>
+          </div>
+        ) : null}
+        <Menu
+          mode="inline"
+          selectedKeys={[getSelectedKey()]}
+          items={menuItems}
+          onClick={({ key }) => handleMenuClick(key)}
+        />
+      </Drawer>
     </Layout>
   );
 };

@@ -14,16 +14,29 @@ router = APIRouter()
 def _to_beijing(dt: datetime) -> datetime:
     bj_tz = timezone(timedelta(hours=8))
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc).astimezone(bj_tz)
+        return dt.replace(tzinfo=bj_tz)
     return dt.astimezone(bj_tz)
+
+
+def _to_beijing_naive_for_db(dt: datetime) -> datetime:
+    """
+    将查询时间统一转换为“北京时间的无时区时间”用于 SQLite 过滤。
+    说明：
+    - SQLite 中历史时间通常按无时区字符串存储
+    - 若直接拿带时区时间比较，容易出现当天边界错位
+    """
+    bj = _to_beijing(dt)
+    return bj.replace(tzinfo=None)
 
 @router.post("/export-excel")
 async def export_excel(report_params: ReportParams, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     """导出指定时间段内的结算数据为Excel"""
+    start_dt = _to_beijing_naive_for_db(report_params.start_date)
+    end_dt = _to_beijing_naive_for_db(report_params.end_date)
     # 查询结算数据
     settlements = db.query(Settlement).filter(
-        Settlement.datetime >= report_params.start_date,
-        Settlement.datetime <= report_params.end_date
+        Settlement.datetime >= start_dt,
+        Settlement.datetime <= end_dt
     ).all()
     
     if not settlements:
@@ -34,7 +47,9 @@ async def export_excel(report_params: ReportParams, db: Session = Depends(get_db
     
     # 准备数据
     data = []
-    total_club_income = 0.0
+    total_receipt = 0.0
+    total_worker_pay = 0.0
+    total_club_share = 0.0
     
     for settlement in settlements:
         bj_dt = _to_beijing(settlement.datetime)
@@ -52,10 +67,9 @@ async def export_excel(report_params: ReportParams, db: Session = Depends(get_db
                 "打手应得": item.worker_pay,
                 "结算时间": bj_dt
             })
-            total_club_income += float(item.club_cut or 0.0)
-    
-    # 俱乐部收益口径：以抽成为准
-    net_profit = total_club_income
+            total_receipt += float(item.total_value or 0.0)
+            total_worker_pay += float(item.worker_pay or 0.0)
+            total_club_share += float(item.club_cut or 0.0)
     
     # 创建DataFrame
     df = pd.DataFrame(data)
@@ -68,8 +82,8 @@ async def export_excel(report_params: ReportParams, db: Session = Depends(get_db
         
         # 创建汇总表
         summary_data = {
-            "项目": ["俱乐部收益(抽成)", "净利润"],
-            "金额": [total_club_income, net_profit]
+            "项目": ["流水（总收款）", "总佣金支出", "净利润（俱乐部分成）"],
+            "金额": [total_receipt, total_worker_pay, total_club_share]
         }
         summary_df = pd.DataFrame(summary_data)
         summary_df.to_excel(writer, sheet_name='汇总', index=False)
@@ -91,41 +105,41 @@ async def export_excel(report_params: ReportParams, db: Session = Depends(get_db
 @router.post("/summary")
 async def get_report_summary(report_params: ReportParams, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     """获取指定时间段内的结算汇总数据"""
+    start_dt = _to_beijing_naive_for_db(report_params.start_date)
+    end_dt = _to_beijing_naive_for_db(report_params.end_date)
     # 查询结算数据
     settlements = db.query(Settlement).filter(
-        Settlement.datetime >= report_params.start_date,
-        Settlement.datetime <= report_params.end_date
+        Settlement.datetime >= start_dt,
+        Settlement.datetime <= end_dt
     ).all()
     
-    total_club_income = 0.0
+    total_receipt = 0.0
     total_worker_pay = 0.0
+    total_club_share = 0.0
     
     for settlement in settlements:
         for item in settlement.settlement_items:
-            total_club_income += float(item.club_cut or 0.0)
+            total_receipt += float(item.total_value or 0.0)
             total_worker_pay += float(item.worker_pay or 0.0)
-    
-    # 口径：
-    # - 收益 = 俱乐部分成（club_cut）
-    # - 支出 = 打手结算金额（worker_pay）
-    # - 净利润 = 收益 - 支出
-    net_profit = total_club_income - total_worker_pay
+            total_club_share += float(item.club_cut or 0.0)
     
     return {
         "start_date": report_params.start_date,
         "end_date": report_params.end_date,
-        "total_income": total_club_income,
+        "total_income": total_receipt,
         "total_expense": total_worker_pay,
-        "net_profit": net_profit
+        "net_profit": total_club_share
     }
 
 @router.post("/trend")
 async def get_report_trend(report_params: ReportParams, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     """获取指定时间段内的收益趋势数据"""
+    start_dt = _to_beijing_naive_for_db(report_params.start_date)
+    end_dt = _to_beijing_naive_for_db(report_params.end_date)
     # 查询结算数据
     settlements = db.query(Settlement).filter(
-        Settlement.datetime >= report_params.start_date,
-        Settlement.datetime <= report_params.end_date
+        Settlement.datetime >= start_dt,
+        Settlement.datetime <= end_dt
     ).all()
     
     # 按日期分组计算数据
@@ -142,11 +156,12 @@ async def get_report_trend(report_params: ReportParams, db: Session = Depends(ge
             }
         
         for item in settlement.settlement_items:
-            club_cut = float(item.club_cut or 0.0)
+            total_value = float(item.total_value or 0.0)
             worker_pay = float(item.worker_pay or 0.0)
-            daily_data[date_key]["income"] += club_cut
+            club_cut = float(item.club_cut or 0.0)
+            daily_data[date_key]["income"] += total_value
             daily_data[date_key]["expense"] += worker_pay
-            daily_data[date_key]["profit"] += (club_cut - worker_pay)
+            daily_data[date_key]["profit"] += club_cut
     
     # 转换为列表并按日期排序
     trend_data = sorted(daily_data.values(), key=lambda x: x["date"])

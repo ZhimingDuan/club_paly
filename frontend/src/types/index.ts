@@ -31,6 +31,7 @@ export interface Item {
   item_name: string;
   unit_qty: number;
   unit_price: number;
+  is_commissioned: boolean;
 }
 
 // 订单状态枚举

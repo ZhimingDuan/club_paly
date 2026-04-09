@@ -251,7 +251,6 @@ const Orders: React.FC = () => {
                       <Form.Item
                         {...field}
                         name={[field.name, 'item_id']}
-                        fieldKey={[field.fieldKey, 'item_id']}
                         rules={[{ required: true, message: '请选择物资' }]}
                       >
                         <Select placeholder="选择物资" style={{ width: 150 }}>
@@ -263,15 +262,13 @@ const Orders: React.FC = () => {
                       <Form.Item
                         {...field}
                         name={[field.name, 'target_qty']}
-                        fieldKey={[field.fieldKey, 'target_qty']}
                         rules={[{ required: true, message: '请输入目标数量' }]}
                       >
-                        <InputNumber placeholder="目标数量" style={{ width: 120 }} />
+                        <Input placeholder="目标数量(支持k/w)" style={{ width: 140 }} />
                       </Form.Item>
                       <Form.Item
                         {...field}
                         name={[field.name, 'premium_rate']}
-                        fieldKey={[field.fieldKey, 'premium_rate']}
                         initialValue={1.0}
                       >
                         <InputNumber placeholder="单价倍率" style={{ width: 120 }} min={0} step={0.1} />

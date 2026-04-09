@@ -7,6 +7,7 @@ from database import (
     migrate_orders_worker_id_nullable,
     migrate_users_permissions_column,
     migrate_default_admin_username,
+    migrate_items_is_commissioned_column,
 )
 from routers import auth, users, workers, items, orders, settlements, reports
 
@@ -19,6 +20,8 @@ migrate_orders_worker_id_nullable()
 migrate_users_permissions_column()
 # 迁移：默认管理员用户名 admin -> boss_duan
 migrate_default_admin_username()
+# 迁移：物资是否参与分成配置
+migrate_items_is_commissioned_column()
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)

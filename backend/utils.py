@@ -64,22 +64,21 @@ def decode_access_token(token: str):
 
 # 智能数量解析（支持w单位）
 def parse_quantity(quantity_str: str) -> float:
-    """将字符串数量解析为浮点数，支持w单位（1w=10000）"""
+    """将字符串数量解析为浮点数，支持 k/w 单位（1k=1000, 1w=10000）"""
     # 移除空格
     quantity_str = quantity_str.strip()
     
-    # 检查是否包含w
-    if 'w' in quantity_str.lower():
-        # 提取数字部分
-        num_part = quantity_str.lower().replace('w', '')
-        try:
-            num = float(num_part)
-            return num * 10000
-        except ValueError:
-            raise ValueError(f"无效的数量格式: {quantity_str}")
-    else:
-        # 直接转换为浮点数
-        try:
-            return float(quantity_str)
-        except ValueError:
-            raise ValueError(f"无效的数量格式: {quantity_str}")
+    lower = quantity_str.lower()
+    multiplier = 1.0
+    if lower.endswith("w"):
+        lower = lower[:-1]
+        multiplier = 10000.0
+    elif lower.endswith("k"):
+        lower = lower[:-1]
+        multiplier = 1000.0
+
+    try:
+        num = float(lower)
+        return num * multiplier
+    except ValueError:
+        raise ValueError(f"无效的数量格式: {quantity_str}")

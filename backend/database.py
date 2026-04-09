@@ -155,3 +155,25 @@ def migrate_default_admin_username() -> None:
             text("UPDATE users SET username='boss_duan' WHERE username='admin'")
         )
         conn.commit()
+
+
+def migrate_items_is_commissioned_column() -> None:
+    """
+    为 items 表补充 is_commissioned 列（是否参与俱乐部分成）。
+    历史数据默认参与分成（1）。
+    """
+    with engine.connect() as conn:
+        try:
+            table_info = conn.execute(text("PRAGMA table_info(items)")).fetchall()
+        except Exception:
+            return
+        if not table_info:
+            return
+
+        has_column = any(r[1] == "is_commissioned" for r in table_info)
+        if has_column:
+            return
+
+        conn.execute(text("ALTER TABLE items ADD COLUMN is_commissioned BOOLEAN DEFAULT 1"))
+        conn.execute(text("UPDATE items SET is_commissioned = 1 WHERE is_commissioned IS NULL"))
+        conn.commit()
