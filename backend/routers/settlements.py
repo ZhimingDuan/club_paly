@@ -37,6 +37,43 @@ def _calc_effective_qty(
     effective_qty = min(float(requested_qty), remaining_qty)
     return max(effective_qty, 0.0), remaining_qty
 
+
+def _build_settlement_display_id_map(db: Session) -> dict[int, str]:
+    rows = db.query(Settlement.id, Settlement.datetime).order_by(Settlement.datetime.asc(), Settlement.id.asc()).all()
+    seq_by_day: dict[str, int] = {}
+    result: dict[int, str] = {}
+    for settlement_id, dt in rows:
+        bj_dt = _to_beijing(dt)
+        if bj_dt is None:
+            continue
+        day_key = bj_dt.strftime("%y%m%d")
+        seq_by_day[day_key] = seq_by_day.get(day_key, 0) + 1
+        result[int(settlement_id)] = f"{day_key}-{seq_by_day[day_key]:03d}"
+    return result
+
+
+def _build_order_display_id_map(db: Session) -> dict[int, str]:
+    rows = db.query(Order.id, Order.create_time).order_by(Order.create_time.asc(), Order.id.asc()).all()
+    seq_by_day: dict[str, int] = {}
+    result: dict[int, str] = {}
+    for order_id, dt in rows:
+        bj_dt = _to_beijing(dt)
+        if bj_dt is None:
+            continue
+        day_key = bj_dt.strftime("%y%m%d")
+        seq_by_day[day_key] = seq_by_day.get(day_key, 0) + 1
+        result[int(order_id)] = f"{day_key}-{seq_by_day[day_key]:03d}"
+    return result
+
+
+def _attach_display_ids(settlements: List[Settlement], db: Session) -> None:
+    settlement_map = _build_settlement_display_id_map(db)
+    order_map = _build_order_display_id_map(db)
+    for settlement in settlements:
+        setattr(settlement, "display_id", settlement_map.get(int(settlement.id), str(settlement.id)))
+        if getattr(settlement, "order", None):
+            setattr(settlement.order, "display_id", order_map.get(int(settlement.order.id), str(settlement.order.id)))
+
 @router.get("/", response_model=List[SettlementSchema], dependencies=[Depends(get_current_user)])
 async def get_settlements(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     settlements = db.query(Settlement).offset(skip).limit(limit).all()
@@ -44,6 +81,7 @@ async def get_settlements(skip: int = 0, limit: int = 100, db: Session = Depends
         s.datetime = _to_beijing(s.datetime)
         if getattr(s, "order", None):
             s.order.create_time = _to_beijing(s.order.create_time)
+    _attach_display_ids(settlements, db)
     return settlements
 
 @router.post("/", response_model=SettlementSchema, dependencies=[Depends(get_current_user)])
@@ -185,6 +223,7 @@ async def create_settlement(settlement: SettlementCreate, db: Session = Depends(
     db_settlement.datetime = _to_beijing(db_settlement.datetime)
     if getattr(db_settlement, "order", None):
         db_settlement.order.create_time = _to_beijing(db_settlement.order.create_time)
+    _attach_display_ids([db_settlement], db)
     return db_settlement
 
 @router.get("/{settlement_id}", response_model=SettlementSchema, dependencies=[Depends(get_current_user)])
@@ -198,6 +237,7 @@ async def get_settlement(settlement_id: int, db: Session = Depends(get_db)):
     settlement.datetime = _to_beijing(settlement.datetime)
     if getattr(settlement, "order", None):
         settlement.order.create_time = _to_beijing(settlement.order.create_time)
+    _attach_display_ids([settlement], db)
     return settlement
 
 @router.delete("/{settlement_id}", dependencies=[Depends(get_admin_user)])

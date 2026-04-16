@@ -9,6 +9,13 @@ const { Title } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
+const zhDateTime = (v: string) => {
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return v || '-';
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+};
+
 const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -133,8 +140,9 @@ const Orders: React.FC = () => {
   const columns = [
     {
       title: '订单ID',
-      dataIndex: 'id',
+      dataIndex: 'display_id',
       key: 'id',
+      render: (v: string | undefined, record: Order) => v || String(record.id),
     },
     {
       title: '老板名称',
@@ -157,6 +165,7 @@ const Orders: React.FC = () => {
       title: '创建时间',
       dataIndex: 'create_time',
       key: 'create_time',
+      render: (v: string) => zhDateTime(v),
     },
     {
       title: '操作',
@@ -306,11 +315,11 @@ const Orders: React.FC = () => {
       >
         {currentOrder && (
           <div>
-            <p><strong>订单ID:</strong> {currentOrder.id}</p>
+            <p><strong>订单ID:</strong> {currentOrder.display_id || currentOrder.id}</p>
             <p><strong>老板名称:</strong> {currentOrder.boss_name}</p>
             <p><strong>打手:</strong> {currentOrder.worker?.name}</p>
             <p><strong>状态:</strong> {currentOrder.status === 'pending' ? '待结算' : '已完成'}</p>
-            <p><strong>创建时间:</strong> {currentOrder.create_time}</p>
+            <p><strong>创建时间:</strong> {zhDateTime(currentOrder.create_time)}</p>
             <p><strong>备注:</strong> {currentOrder.remarks || '-'}</p>
             
             <div style={{ marginTop: 20 }}>

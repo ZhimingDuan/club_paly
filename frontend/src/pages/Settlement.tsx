@@ -8,6 +8,13 @@ import { usePermission } from '@/store/useStore';
 const { Title } = Typography;
 const { Option } = Select;
 
+const zhDateTime = (v: string) => {
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return v || '-';
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+};
+
 const Settlement: React.FC = () => {
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
@@ -289,8 +296,9 @@ const Settlement: React.FC = () => {
     },
     {
       title: '订单ID',
-      dataIndex: 'id',
+      dataIndex: 'display_id',
       key: 'id',
+      render: (v: string | undefined, record: Order) => v || String(record.id),
     },
     {
       title: '老板名称',
@@ -343,6 +351,7 @@ const Settlement: React.FC = () => {
       title: '创建时间',
       dataIndex: 'create_time',
       key: 'create_time',
+      render: (v: string) => zhDateTime(v),
     },
     {
       title: '操作',
@@ -407,7 +416,7 @@ const Settlement: React.FC = () => {
                   pagination={false}
                   scroll={{ x: 1300 }}
                 >
-                  <Table.Column title="订单ID" dataIndex="order_id" />
+                  <Table.Column title="订单ID" render={(text, record) => selectedOrders.find((o) => o.id === record.order_id)?.display_id || record.order_id} />
                   <Table.Column title="物资名称" dataIndex="item" render={(item: Item) => item.item_name} />
                   <Table.Column title="目标数量" dataIndex="target_qty" />
                   <Table.Column title="已完成" dataIndex="delivered_qty" />
@@ -493,7 +502,7 @@ const Settlement: React.FC = () => {
                     const calc = calculateValue(record.item, record.submit_qty, record.worker_id ?? -1, record.premium_rate, record.remaining_qty);
                     return (
                       <Card key={`${record.order_id}-${record.item_id}-${index}`} size="small" style={{ borderRadius: 10 }}>
-                        <div style={{ fontWeight: 600, marginBottom: 6 }}>{record.item.item_name}（订单 {record.order_id}）</div>
+                        <div style={{ fontWeight: 600, marginBottom: 6 }}>{record.item.item_name}（订单 {selectedOrders.find((o) => o.id === record.order_id)?.display_id || record.order_id}）</div>
                         <div style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>
                           目标 {record.target_qty} / 已完成 {record.delivered_qty} / 剩余 {record.remaining_qty}
                         </div>

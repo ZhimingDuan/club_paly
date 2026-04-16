@@ -127,6 +127,7 @@ class OrderUpdate(BaseModel):
 
 class Order(OrderBase):
     id: int
+    display_id: Optional[str] = None
     status: OrderStatusEnum
     create_time: datetime
     worker: Optional[Worker] = None
@@ -164,6 +165,7 @@ class SettlementCreate(SettlementBase):
 
 class Settlement(SettlementBase):
     id: int
+    display_id: Optional[str] = None
     datetime: datetime
     order: Order
     worker: Worker

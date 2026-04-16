@@ -54,6 +54,7 @@ export interface OrderItem {
 // 订单主表相关类型
 export interface Order {
   id: number;
+  display_id?: string;
   boss_name: string;
   worker_id: number | null;
   remarks: string | null;
@@ -78,6 +79,7 @@ export interface SettlementItem {
 // 结算主表相关类型
 export interface Settlement {
   id: number;
+  display_id?: string;
   order_id: number;
   worker_id: number;
   datetime: string;

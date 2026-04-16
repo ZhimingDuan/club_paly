@@ -47,11 +47,32 @@ def _attach_delivered_qty(orders: List[Order], db: Session) -> None:
             setattr(oi, "delivered_qty", delivered_map.get((int(o.id), int(oi.item_id)), 0.0))
 
 
+def _build_order_display_id_map(db: Session) -> dict[int, str]:
+    rows = db.query(Order.id, Order.create_time).order_by(Order.create_time.asc(), Order.id.asc()).all()
+    seq_by_day: dict[str, int] = {}
+    result: dict[int, str] = {}
+    for order_id, create_time in rows:
+        bj_dt = _to_beijing(create_time)
+        if bj_dt is None:
+            continue
+        day_key = bj_dt.strftime("%y%m%d")
+        seq_by_day[day_key] = seq_by_day.get(day_key, 0) + 1
+        result[int(order_id)] = f"{day_key}-{seq_by_day[day_key]:03d}"
+    return result
+
+
+def _attach_display_ids(orders: List[Order], db: Session) -> None:
+    display_map = _build_order_display_id_map(db)
+    for order in orders:
+        setattr(order, "display_id", display_map.get(int(order.id), str(order.id)))
+
+
 @router.get("/", response_model=List[OrderSchema], dependencies=[Depends(get_current_user)])
 async def get_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     orders = db.query(Order).offset(skip).limit(limit).all()
     for o in orders:
         o.create_time = _to_beijing(o.create_time)
+    _attach_display_ids(orders, db)
     _attach_delivered_qty(orders, db)
     return orders
 
@@ -100,6 +121,7 @@ async def create_order(order: OrderCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_order)
     db_order.create_time = _to_beijing(db_order.create_time)
+    _attach_display_ids([db_order], db)
     return db_order
 
 @router.get("/{order_id}", response_model=OrderSchema, dependencies=[Depends(get_current_user)])
@@ -111,6 +133,7 @@ async def get_order(order_id: int, db: Session = Depends(get_db)):
             detail="订单不存在"
         )
     order.create_time = _to_beijing(order.create_time)
+    _attach_display_ids([order], db)
     return order
 
 @router.put("/{order_id}", response_model=OrderSchema, dependencies=[Depends(get_current_user)])
@@ -131,6 +154,7 @@ async def update_order(order_id: int, order_update: OrderUpdate, db: Session = D
     db.commit()
     db.refresh(order)
     order.create_time = _to_beijing(order.create_time)
+    _attach_display_ids([order], db)
     return order
 
 
@@ -148,6 +172,7 @@ async def force_complete_order(order_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(order)
     order.create_time = _to_beijing(order.create_time)
+    _attach_display_ids([order], db)
 
     # 强制结单后也返回最新 delivered_qty（便于前端刷新）
     _attach_delivered_qty([order], db)
@@ -172,5 +197,6 @@ async def get_pending_orders(db: Session = Depends(get_db)):
     orders = db.query(Order).filter(Order.status == OrderStatusEnum.pending).all()
     for o in orders:
         o.create_time = _to_beijing(o.create_time)
+    _attach_display_ids(orders, db)
     _attach_delivered_qty(orders, db)
     return orders

@@ -14,16 +14,6 @@ const zhDateTime = (v: string) => {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 };
-const formatBizId = (id: number, dt: string) => {
-  const d = new Date(dt);
-  const p = (n: number) => String(n).padStart(2, '0');
-  if (Number.isNaN(d.getTime())) return String(id);
-  const y = p(d.getFullYear() % 100);
-  const m = p(d.getMonth() + 1);
-  const day = p(d.getDate());
-  return `${y}${m}${day}-${String(id).padStart(3, '0')}`;
-};
-
 const toDate = (v: string) => {
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? null : d;
@@ -33,8 +23,10 @@ type DateRange = [Date | null, Date | null];
 type SettlementRow = {
   row_id: string;
   settlement_id: number;
+  settlement_display_id: string;
   settlement_time: string;
   order_id: number;
+  order_display_id: string;
   order_create_time: string;
   boss_name: string;
   worker_id: number;
@@ -78,8 +70,10 @@ const Query: React.FC = () => {
       (settlement.settlement_items || []).map((item) => ({
         row_id: `${settlement.id}-${item.id}`,
         settlement_id: settlement.id,
+        settlement_display_id: settlement.display_id || String(settlement.id),
         settlement_time: settlement.datetime,
         order_id: settlement.order_id,
+        order_display_id: settlement.order?.display_id || String(settlement.order_id),
         order_create_time: settlement.order?.create_time || settlement.datetime,
         boss_name: settlement.order?.boss_name || '-',
         worker_id: settlement.worker_id,
@@ -140,10 +134,9 @@ const Query: React.FC = () => {
   const columns = [
     {
       title: '结算ID',
-      dataIndex: 'settlement_id',
+      dataIndex: 'settlement_display_id',
       key: 'settlement_id',
       width: 120,
-      render: (v: number, r: SettlementRow) => formatBizId(v, r.settlement_time),
     },
     {
       title: '时间',
@@ -154,10 +147,9 @@ const Query: React.FC = () => {
     },
     {
       title: '订单ID',
-      dataIndex: 'order_id',
+      dataIndex: 'order_display_id',
       key: 'order_id',
       width: 120,
-      render: (v: number, r: SettlementRow) => formatBizId(v, r.order_create_time),
     },
     { title: '老板', dataIndex: 'boss_name', key: 'boss_name', width: 140 },
     { title: '打手', dataIndex: 'worker_name', key: 'worker_name', width: 130 },
@@ -260,7 +252,7 @@ const Query: React.FC = () => {
               <Card key={r.row_id} size="small" style={{ borderRadius: 10 }}>
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>{r.item_name} / {r.worker_name}</div>
                 <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>
-                  结算 {formatBizId(r.settlement_id, r.settlement_time)} · 订单 {formatBizId(r.order_id, r.order_create_time)}
+                  结算 {r.settlement_display_id} · 订单 {r.order_display_id}
                 </div>
                 <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
                   老板：{r.boss_name} · 时间：{zhDateTime(r.settlement_time)}
