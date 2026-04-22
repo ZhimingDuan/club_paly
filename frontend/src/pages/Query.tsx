@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Card, DatePicker, Input, Select, Space, Table, Typography, message, Button, Statistic, Grid } from 'antd';
+import { Card, DatePicker, Input, Select, Space, Table, Typography, message, Button, Grid } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { settlementApi } from '@/services/api';
 import { Settlement } from '@/types';
@@ -124,13 +124,6 @@ const Query: React.FC = () => {
     });
   }, [rows, bossKeyword, itemKeyword, workerId, dateRange]);
 
-  const summary = useMemo(() => {
-    const totalWorkerPay = filtered.reduce((acc, r) => acc + (r.worker_pay || 0), 0);
-    const totalClubCut = filtered.reduce((acc, r) => acc + (r.club_cut || 0), 0);
-    const totalValue = filtered.reduce((acc, r) => acc + (r.total_value || 0), 0);
-    return { totalWorkerPay, totalClubCut, totalValue };
-  }, [filtered]);
-
   const columns = [
     {
       title: '结算ID',
@@ -223,18 +216,6 @@ const Query: React.FC = () => {
           </div>
         </Space>
       </Card>
-
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
-        <Card>
-          <Statistic title="打手结算金额合计" value={summary.totalWorkerPay} precision={2} formatter={(v) => money(Number(v || 0))} />
-        </Card>
-        <Card>
-          <Statistic title="俱乐部分成合计" value={summary.totalClubCut} precision={2} formatter={(v) => money(Number(v || 0))} />
-        </Card>
-        <Card>
-          <Statistic title="总价值合计" value={summary.totalValue} precision={2} formatter={(v) => money(Number(v || 0))} />
-        </Card>
-      </div>
 
       <Card>
         {!isMobile ? (
