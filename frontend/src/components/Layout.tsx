@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Layout, Menu, Button, Typography, Drawer, Grid } from 'antd';
 import {
   LogoutOutlined,
@@ -14,7 +14,6 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore, usePermission } from '@/store/useStore';
-import { userApi } from '@/services/api';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -24,7 +23,7 @@ interface LayoutProps {
 }
 
 const AppLayout: React.FC<LayoutProps> = ({ children }) => {
-  const { user, logout, setUser } = useStore();
+  const { user, logout } = useStore();
   const { hasPermission } = usePermission();
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,26 +31,7 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
   const isMobile = !screens.md;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // 获取当前用户信息
-  useEffect(() => {
-    // 暂时注释掉API请求，确保前端功能可以正常工作
-    // const fetchCurrentUser = async () => {
-    //   try {
-    //     console.log('开始获取用户信息');
-    //     const userInfo = await userApi.getCurrentUser();
-    //     console.log('获取用户信息成功:', userInfo);
-    //     setUser(userInfo);
-    //   } catch (error) {
-    //     console.error('获取用户信息失败', error);
-    //     // 即使获取用户信息失败，也不影响组件渲染
-    //   }
-    // };
-
-    // fetchCurrentUser();
-  }, [setUser]);
-
   const handleLogout = () => {
-    console.log('退出登录按钮被点击');
     logout();
     navigate('/login');
   };
@@ -146,10 +126,7 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
               selectedKeys={[getSelectedKey()]}
               style={{ height: '100%', borderRight: 0 }}
               items={menuItems}
-              onClick={({ key }) => {
-                console.log('菜单被点击，key:', key);
-                handleMenuClick(key);
-              }}
+              onClick={({ key }) => handleMenuClick(key)}
             />
           </Sider>
         ) : null}

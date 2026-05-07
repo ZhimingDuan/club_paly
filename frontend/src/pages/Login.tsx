@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Card, Form, Input, message, Typography } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { authApi } from '@/services/api';
+import { authApi, getApiErrorMessage } from '@/services/api';
 import { useStore } from '@/store/useStore';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,17 +16,13 @@ const Login: React.FC = () => {
   const handleLogin = async (values: { username: string; password: string }) => {
     try {
       setLoading(true);
-      console.log('开始登录，用户名:', values.username);
       const response = await authApi.login(values.username, values.password);
-      console.log('登录成功，响应:', response);
       setToken(response.access_token);
       setUser(response.user);
-      console.log('Token已保存:', useStore.getState().token);
       message.success('登录成功');
       navigate('/');
     } catch (error) {
-      console.error('登录失败:', error);
-      message.error('登录失败，请检查用户名和密码');
+      message.error(getApiErrorMessage(error, '登录失败，请检查用户名和密码'));
     } finally {
       setLoading(false);
     }

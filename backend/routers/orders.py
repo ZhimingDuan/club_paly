@@ -76,6 +76,21 @@ async def get_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_
     _attach_delivered_qty(orders, db)
     return orders
 
+
+@router.get("/boss-names", response_model=List[str], dependencies=[Depends(get_current_user)])
+async def get_boss_names(limit: int = 100, db: Session = Depends(get_db)):
+    """返回历史订单中的老板名称（去重）用于前端下拉匹配。"""
+    names = (
+        db.query(Order.boss_name)
+        .filter(Order.boss_name.isnot(None))
+        .filter(func.length(func.trim(Order.boss_name)) > 0)
+        .distinct()
+        .order_by(Order.boss_name.asc())
+        .limit(limit)
+        .all()
+    )
+    return [str(name).strip() for (name,) in names if name and str(name).strip()]
+
 @router.post("/", response_model=OrderSchema, dependencies=[Depends(get_current_user)])
 async def create_order(order: OrderCreate, db: Session = Depends(get_db)):
     # 验证打手是否存在（如果提供了worker_id）

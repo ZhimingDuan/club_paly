@@ -100,4 +100,12 @@ export interface ReportSummary {
   total_income: number;
   total_expense: number;
   net_profit: number;
+  boss_spending: Array<{
+    boss_name: string;
+    amount: number;
+  }>;
+  worker_earnings: Array<{
+    worker_name: string;
+    amount: number;
+  }>;
 }

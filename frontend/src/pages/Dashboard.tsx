@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Statistic, DatePicker, message, Typography, Grid } from 'antd';
+import { Card, Statistic, DatePicker, message, Typography, Grid, Table } from 'antd';
 import { reportApi } from '@/services/api';
 import { ReportParams } from '@/types';
 import { BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -11,15 +11,20 @@ const money = (v: number) => `¥${Number(v || 0).toLocaleString('zh-CN', { minim
 const Dashboard: React.FC = () => {
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
   const [dateRange, setDateRange] = useState<[string, string]>([
-    new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
-    new Date(new Date().setHours(23, 59, 59, 999)).toISOString()
+    monthStart.toISOString(),
+    monthEnd.toISOString()
   ]);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState({
     total_income: 0,
     total_expense: 0,
-    net_profit: 0
+    net_profit: 0,
+    boss_spending: [] as Array<{ boss_name: string; amount: number }>,
+    worker_earnings: [] as Array<{ worker_name: string; amount: number }>
   });
   const [trendData, setTrendData] = useState<Array<{date: string, income: number, expense: number, profit: number}>>([]);
 
@@ -40,7 +45,9 @@ const Dashboard: React.FC = () => {
       setSummary({
         total_income: summaryData.total_income,
         total_expense: summaryData.total_expense,
-        net_profit: summaryData.net_profit
+        net_profit: summaryData.net_profit,
+        boss_spending: summaryData.boss_spending || [],
+        worker_earnings: summaryData.worker_earnings || []
       });
       
       setTrendData(trendData);
@@ -150,6 +157,47 @@ const Dashboard: React.FC = () => {
           </ResponsiveContainer>
         </div>
       </Card>
+
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginTop: 24 }}>
+        <Card title="老板消费排行" loading={loading}>
+          <Table
+            pagination={false}
+            size="small"
+            dataSource={summary.boss_spending.map((row, index) => ({ ...row, rank: index + 1, key: `${row.boss_name}-${index}` }))}
+            locale={{ emptyText: '当前时间段暂无数据' }}
+            columns={[
+              { title: '排名', dataIndex: 'rank', key: 'rank', width: 72 },
+              { title: '老板', dataIndex: 'boss_name', key: 'boss_name' },
+              {
+                title: '消费金额',
+                dataIndex: 'amount',
+                key: 'amount',
+                align: 'right',
+                render: (value: number) => money(value)
+              }
+            ]}
+          />
+        </Card>
+        <Card title="打手收益排行" loading={loading}>
+          <Table
+            pagination={false}
+            size="small"
+            dataSource={summary.worker_earnings.map((row, index) => ({ ...row, rank: index + 1, key: `${row.worker_name}-${index}` }))}
+            locale={{ emptyText: '当前时间段暂无数据' }}
+            columns={[
+              { title: '排名', dataIndex: 'rank', key: 'rank', width: 72 },
+              { title: '打手', dataIndex: 'worker_name', key: 'worker_name' },
+              {
+                title: '收益金额',
+                dataIndex: 'amount',
+                key: 'amount',
+                align: 'right',
+                render: (value: number) => money(value)
+              }
+            ]}
+          />
+        </Card>
+      </div>
     </div>
   );
 };

@@ -1,14 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { userApi } from '@/services/api';
 import Login from '@/pages/Login';
 import Layout from '@/components/Layout';
-import Dashboard from '@/pages/Dashboard';
-import Orders from '@/pages/Orders';
-import Settlement from '@/pages/Settlement';
-import Query from '@/pages/Query';
-import Settings from '@/pages/Settings';
+
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const Orders = lazy(() => import('@/pages/Orders'));
+const Settlement = lazy(() => import('@/pages/Settlement'));
+const Query = lazy(() => import('@/pages/Query'));
+const Settings = lazy(() => import('@/pages/Settings'));
 
 const App: React.FC = () => {
   const { token, setUser, user } = useStore();
@@ -25,12 +26,9 @@ const App: React.FC = () => {
     const checkAuth = async () => {
       if (token) {
         try {
-          console.log('开始检查用户认证状态');
           const userInfo = await userApi.getCurrentUser();
-          console.log('认证成功，用户信息:', userInfo);
           setUser(userInfo);
-        } catch (error) {
-          console.error('认证失败', error);
+        } catch {
           // 清除无效的token
           useStore.getState().logout();
         }
@@ -45,7 +43,13 @@ const App: React.FC = () => {
     if (!token) {
       return <Navigate to="/login" />;
     }
-    return <Layout>{children}</Layout>;
+    return (
+      <Layout>
+        <Suspense fallback={<div style={{ padding: 24 }}>页面加载中...</div>}>
+          {children}
+        </Suspense>
+      </Layout>
+    );
   };
 
   return (

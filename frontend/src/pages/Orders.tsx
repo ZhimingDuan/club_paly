@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Table, Form, Input, Select, Modal, Popconfirm, message, Typography, Space, InputNumber } from 'antd';
+import { Card, Button, Table, Form, Input, Select, Modal, Popconfirm, message, Typography, Space, InputNumber, AutoComplete } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
-import { orderApi, workerApi, itemApi } from '@/services/api';
+import { orderApi, workerApi, itemApi, getApiErrorMessage } from '@/services/api';
 import { Order, Worker, Item } from '@/types';
 import { usePermission } from '@/store/useStore';
 
@@ -20,6 +20,7 @@ const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [bossNameOptions, setBossNameOptions] = useState<Array<{ value: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -34,8 +35,8 @@ const Orders: React.FC = () => {
       setLoading(true);
       const data = await orderApi.getOrders();
       setOrders(data);
-    } catch (error) {
-      message.error('获取订单失败');
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, '获取订单失败'));
     } finally {
       setLoading(false);
     }
@@ -46,8 +47,8 @@ const Orders: React.FC = () => {
     try {
       const data = await workerApi.getWorkers();
       setWorkers(data);
-    } catch (error) {
-      message.error('获取打手表失败');
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, '获取打手表失败'));
     }
   };
 
@@ -56,8 +57,17 @@ const Orders: React.FC = () => {
     try {
       const data = await itemApi.getItems();
       setItems(data);
-    } catch (error) {
-      message.error('获取物资表失败');
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, '获取物资表失败'));
+    }
+  };
+
+  const fetchBossNames = async () => {
+    try {
+      const data = await orderApi.getBossNames();
+      setBossNameOptions(data.map((name) => ({ value: name })));
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, '获取老板名称失败'));
     }
   };
 
@@ -65,6 +75,7 @@ const Orders: React.FC = () => {
     fetchOrders();
     fetchWorkers();
     fetchItems();
+    fetchBossNames();
   }, []);
 
   // 打开新建订单模态框
@@ -96,9 +107,8 @@ const Orders: React.FC = () => {
       await orderApi.deleteOrder(orderId);
       message.success('订单删除成功');
       fetchOrders();
-    } catch (error) {
-      const detail = (error as any)?.response?.data?.detail;
-      message.error(detail ? `订单删除失败：${detail}` : '订单删除失败');
+    } catch (error: unknown) {
+      message.error(`订单删除失败：${getApiErrorMessage(error, '请稍后重试')}`);
     }
   };
 
@@ -111,10 +121,17 @@ const Orders: React.FC = () => {
   // 提交订单表单
   const handleSubmit = async (values: any) => {
     try {
+      const normalizedBossName =
+        typeof values.boss_name === 'string' ? values.boss_name.trim() : '';
+      if (!normalizedBossName) {
+        message.error('请输入老板名称');
+        return;
+      }
+
       if (editingOrder) {
         // 更新订单
         await orderApi.updateOrder(editingOrder.id, {
-          boss_name: values.boss_name,
+          boss_name: normalizedBossName,
           worker_id: values.worker_id ?? null,
           remarks: values.remarks
         });
@@ -122,7 +139,7 @@ const Orders: React.FC = () => {
       } else {
         // 创建订单
         await orderApi.createOrder({
-          boss_name: values.boss_name,
+          boss_name: normalizedBossName,
           worker_id: values.worker_id ?? null,
           remarks: values.remarks,
           order_items: values.order_items
@@ -131,8 +148,9 @@ const Orders: React.FC = () => {
       }
       setModalVisible(false);
       fetchOrders();
-    } catch (error) {
-      message.error('操作失败');
+      fetchBossNames();
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, '操作失败'));
     }
   };
 
@@ -226,7 +244,13 @@ const Orders: React.FC = () => {
             label="老板名称"
             rules={[{ required: true, message: '请输入老板名称' }]}
           >
-            <Input placeholder="请输入老板名称" />
+            <AutoComplete
+              options={bossNameOptions}
+              placeholder="输入或选择老板名称"
+              filterOption={(inputValue, option) =>
+                (option?.value ?? '').toLowerCase().includes(inputValue.toLowerCase())
+              }
+            />
           </Form.Item>
 
           <Form.Item

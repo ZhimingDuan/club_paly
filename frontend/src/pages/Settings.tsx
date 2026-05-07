@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Checkbox, Table, Form, Input, InputNumber, Modal, message, Typography, Space, Tabs, Select, Switch } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
-import { workerApi, itemApi, userApi } from '@/services/api';
+import { workerApi, itemApi, userApi, getApiErrorMessage } from '@/services/api';
 import { Worker, Item, User, RoleEnum } from '@/types';
 import { usePermission } from '@/store/useStore';
 
@@ -21,7 +21,9 @@ const Settings: React.FC = () => {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingWorkers, setLoadingWorkers] = useState(false);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -34,39 +36,39 @@ const Settings: React.FC = () => {
   // 获取打手表
   const fetchWorkers = async () => {
     try {
-      setLoading(true);
+      setLoadingWorkers(true);
       const data = await workerApi.getWorkers();
       setWorkers(data);
-    } catch (error) {
-      message.error('获取打手表失败');
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, '获取打手表失败'));
     } finally {
-      setLoading(false);
+      setLoadingWorkers(false);
     }
   };
 
   // 获取物资表
   const fetchItems = async () => {
     try {
-      setLoading(true);
+      setLoadingItems(true);
       const data = await itemApi.getItems();
       setItems(data);
-    } catch (error) {
-      message.error('获取物资表失败');
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, '获取物资表失败'));
     } finally {
-      setLoading(false);
+      setLoadingItems(false);
     }
   };
 
   // 获取用户列表
   const fetchUsers = async () => {
     try {
-      setLoading(true);
+      setLoadingUsers(true);
       const data = await userApi.getUsers();
       setUsers(data);
-    } catch (error) {
-      message.error('获取用户列表失败');
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, '获取用户列表失败'));
     } finally {
-      setLoading(false);
+      setLoadingUsers(false);
     }
   };
 
@@ -101,9 +103,8 @@ const Settings: React.FC = () => {
       await workerApi.deleteWorker(workerId);
       message.success('打手删除成功');
       fetchWorkers();
-    } catch (error) {
-      const detail = (error as any)?.response?.data?.detail;
-      message.error(detail ? `打手删除失败：${detail}` : '打手删除失败');
+    } catch (error: unknown) {
+      message.error(`打手删除失败：${getApiErrorMessage(error, '请稍后重试')}`);
     }
   };
 
@@ -133,9 +134,8 @@ const Settings: React.FC = () => {
       await itemApi.deleteItem(itemId);
       message.success('物资删除成功');
       fetchItems();
-    } catch (error) {
-      const detail = (error as any)?.response?.data?.detail;
-      message.error(detail ? `物资删除失败：${detail}` : '物资删除失败');
+    } catch (error: unknown) {
+      message.error(`物资删除失败：${getApiErrorMessage(error, '请稍后重试')}`);
     }
   };
 
@@ -169,9 +169,8 @@ const Settings: React.FC = () => {
       await userApi.deleteUser(userId);
       message.success('用户删除成功');
       fetchUsers();
-    } catch (error) {
-      const detail = (error as any)?.response?.data?.detail;
-      message.error(detail ? `用户删除失败：${detail}` : '用户删除失败');
+    } catch (error: unknown) {
+      message.error(`用户删除失败：${getApiErrorMessage(error, '请稍后重试')}`);
     }
   };
 
@@ -227,8 +226,8 @@ const Settings: React.FC = () => {
         fetchUsers();
       }
       setModalVisible(false);
-    } catch (error) {
-      message.error('操作失败');
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, '操作失败'));
     }
   };
 
@@ -389,7 +388,7 @@ const Settings: React.FC = () => {
               columns={workerColumns} 
               dataSource={workers} 
               rowKey="id" 
-              loading={loading}
+              loading={loadingWorkers}
               pagination={{ pageSize: 10 }}
               scroll={{ x: 700 }}
             />
@@ -406,7 +405,7 @@ const Settings: React.FC = () => {
               columns={itemColumns} 
               dataSource={items} 
               rowKey="id" 
-              loading={loading}
+              loading={loadingItems}
               pagination={{ pageSize: 10 }}
               scroll={{ x: 900 }}
             />
@@ -424,7 +423,7 @@ const Settings: React.FC = () => {
                 columns={userColumns} 
                 dataSource={users} 
                 rowKey="id" 
-                loading={loading}
+                loading={loadingUsers}
                 pagination={{ pageSize: 10 }}
                 scroll={{ x: 980 }}
               />

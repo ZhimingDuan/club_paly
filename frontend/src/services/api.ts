@@ -2,6 +2,16 @@ import axios from 'axios';
 import { User, Token, Worker, Item, Order, Settlement, ReportParams, ReportSummary } from '@/types';
 import { useStore } from '@/store/useStore';
 
+export const getApiErrorMessage = (error: unknown, fallback = '操作失败'): string => {
+  if (axios.isAxiosError(error)) {
+    const detail = (error.response?.data as { detail?: string } | undefined)?.detail;
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail;
+    }
+  }
+  return fallback;
+};
+
 // 创建axios实例
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || '/api',
@@ -15,11 +25,8 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = useStore.getState().token;
-    console.log('请求URL:', config.url);
-    console.log('请求Token:', token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('已添加Authorization头');
     }
     return config;
   },
@@ -35,9 +42,8 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      // 未授权，清除token并跳转到登录页
+      // 未授权，清除token，由路由守卫跳转登录页
       useStore.getState().logout();
-      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
@@ -108,6 +114,9 @@ export const itemApi = {
 export const orderApi = {
   getOrders: async (): Promise<Order[]> => {
     return api.get('/orders/');
+  },
+  getBossNames: async (): Promise<string[]> => {
+    return api.get('/orders/boss-names');
   },
   createOrder: async (order: {
     boss_name: string;

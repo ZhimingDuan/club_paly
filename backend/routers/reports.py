@@ -116,19 +116,46 @@ async def get_report_summary(report_params: ReportParams, db: Session = Depends(
     total_receipt = 0.0
     total_worker_pay = 0.0
     total_club_share = 0.0
+    boss_spending = {}
+    worker_earnings = {}
     
     for settlement in settlements:
+        boss_name = settlement.order.boss_name if settlement.order else "未知老板"
+        worker_name = settlement.worker.name if settlement.worker else "未知打手"
+        if boss_name not in boss_spending:
+            boss_spending[boss_name] = 0.0
+        if worker_name not in worker_earnings:
+            worker_earnings[worker_name] = 0.0
+
         for item in settlement.settlement_items:
-            total_receipt += float(item.total_value or 0.0)
-            total_worker_pay += float(item.worker_pay or 0.0)
-            total_club_share += float(item.club_cut or 0.0)
+            total_value = float(item.total_value or 0.0)
+            worker_pay = float(item.worker_pay or 0.0)
+            club_cut = float(item.club_cut or 0.0)
+            total_receipt += total_value
+            total_worker_pay += worker_pay
+            total_club_share += club_cut
+            boss_spending[boss_name] += total_value
+            worker_earnings[worker_name] += worker_pay
+
+    boss_spending_list = sorted(
+        [{"boss_name": name, "amount": amount} for name, amount in boss_spending.items()],
+        key=lambda x: x["amount"],
+        reverse=True
+    )
+    worker_earnings_list = sorted(
+        [{"worker_name": name, "amount": amount} for name, amount in worker_earnings.items()],
+        key=lambda x: x["amount"],
+        reverse=True
+    )
     
     return {
         "start_date": report_params.start_date,
         "end_date": report_params.end_date,
         "total_income": total_receipt,
         "total_expense": total_worker_pay,
-        "net_profit": total_club_share
+        "net_profit": total_club_share,
+        "boss_spending": boss_spending_list,
+        "worker_earnings": worker_earnings_list
     }
 
 @router.post("/trend")
