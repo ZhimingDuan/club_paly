@@ -151,9 +151,14 @@ class SettlementItem(SettlementItemBase):
     total_value: float
     club_cut: float
     worker_pay: float
+    is_paid: bool = False
     
     class Config:
         from_attributes = True
+
+
+class MarkSettlementItemsPaidRequest(BaseModel):
+    settlement_item_ids: List[int]
 
 # 结算主表相关模型
 class SettlementBase(BaseModel):

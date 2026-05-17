@@ -3,7 +3,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from dependencies import get_db, get_current_user, get_admin_user
 from models import Settlement, SettlementItem, Order, OrderItem, Worker, Item, OrderStatusEnum
-from schemas import Settlement as SettlementSchema, SettlementCreate
+from schemas import (
+    Settlement as SettlementSchema,
+    SettlementCreate,
+    MarkSettlementItemsPaidRequest,
+)
 from utils import parse_quantity
 from typing import List
 from datetime import datetime, timezone, timedelta
@@ -225,6 +229,40 @@ async def create_settlement(settlement: SettlementCreate, db: Session = Depends(
         db_settlement.order.create_time = _to_beijing(db_settlement.order.create_time)
     _attach_display_ids([db_settlement], db)
     return db_settlement
+
+@router.post("/items/mark-paid", dependencies=[Depends(get_admin_user)])
+async def mark_settlement_items_paid(
+    body: MarkSettlementItemsPaidRequest,
+    db: Session = Depends(get_db),
+):
+    """将指定结算明细标记为已向打手结清佣金（管理员）。"""
+    if not body.settlement_item_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="请至少选择一条明细",
+        )
+
+    unique_ids = list(dict.fromkeys(body.settlement_item_ids))
+    rows = (
+        db.query(SettlementItem)
+        .filter(SettlementItem.id.in_(unique_ids))
+        .all()
+    )
+    if len(rows) != len(unique_ids):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="部分结算明细不存在",
+        )
+
+    updated_count = 0
+    for row in rows:
+        if not row.is_paid:
+            row.is_paid = True
+            updated_count += 1
+
+    db.commit()
+    return {"updated_count": updated_count}
+
 
 @router.get("/{settlement_id}", response_model=SettlementSchema, dependencies=[Depends(get_current_user)])
 async def get_settlement(settlement_id: int, db: Session = Depends(get_db)):

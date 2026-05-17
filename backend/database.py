@@ -177,3 +177,25 @@ def migrate_items_is_commissioned_column() -> None:
         conn.execute(text("ALTER TABLE items ADD COLUMN is_commissioned BOOLEAN DEFAULT 1"))
         conn.execute(text("UPDATE items SET is_commissioned = 1 WHERE is_commissioned IS NULL"))
         conn.commit()
+
+
+def migrate_settlement_items_is_paid_column() -> None:
+    """
+    为 settlement_items 表补充 is_paid 列（是否已向打手结清佣金）。
+    历史数据默认未结清（0）。
+    """
+    with engine.connect() as conn:
+        try:
+            table_info = conn.execute(text("PRAGMA table_info(settlement_items)")).fetchall()
+        except Exception:
+            return
+        if not table_info:
+            return
+
+        has_column = any(r[1] == "is_paid" for r in table_info)
+        if has_column:
+            return
+
+        conn.execute(text("ALTER TABLE settlement_items ADD COLUMN is_paid BOOLEAN DEFAULT 0"))
+        conn.execute(text("UPDATE settlement_items SET is_paid = 0 WHERE is_paid IS NULL"))
+        conn.commit()

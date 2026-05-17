@@ -118,6 +118,9 @@ export const orderApi = {
   getBossNames: async (): Promise<string[]> => {
     return api.get('/orders/boss-names');
   },
+  getOrder: async (id: number): Promise<Order> => {
+    return api.get(`/orders/${id}`);
+  },
   createOrder: async (order: {
     boss_name: string;
     worker_id?: number | null;
@@ -166,6 +169,9 @@ export const settlementApi = {
   },
   deleteSettlement: async (id: number): Promise<{ message: string }> => {
     return api.delete(`/settlements/${id}`);
+  },
+  markSettlementItemsPaid: async (settlement_item_ids: number[]): Promise<{ updated_count: number }> => {
+    return api.post('/settlements/items/mark-paid', { settlement_item_ids });
   },
 };
 

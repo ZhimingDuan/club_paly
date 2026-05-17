@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Button, Table, Form, Input, Select, Modal, Popconfirm, message, Typography, Space, InputNumber, AutoComplete } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { orderApi, workerApi, itemApi, getApiErrorMessage } from '@/services/api';
 import { Order, Worker, Item } from '@/types';
 import { usePermission } from '@/store/useStore';
+import OrderDetailModal from '@/components/OrderDetailModal';
+import { calcOrderTotalEstimate } from '@/utils/orderPrice';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -28,13 +30,23 @@ const Orders: React.FC = () => {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [form] = Form.useForm();
   const { hasDeletePermission } = usePermission();
+  const watchedOrderItems = Form.useWatch('order_items', form);
+  const estimatedTotal = useMemo(
+    () => calcOrderTotalEstimate(watchedOrderItems, items),
+    [watchedOrderItems, items]
+  );
 
   // 获取订单列表
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const data = await orderApi.getOrders();
-      setOrders(data);
+      const sorted = [...data].sort((a, b) => {
+        const ta = new Date(a.create_time).getTime();
+        const tb = new Date(b.create_time).getTime();
+        return tb - ta || b.id - a.id;
+      });
+      setOrders(sorted);
     } catch (error: unknown) {
       message.error(getApiErrorMessage(error, '获取订单失败'));
     } finally {
@@ -317,6 +329,12 @@ const Orders: React.FC = () => {
             </Form.List>
           </Form.Item>
 
+          {!editingOrder && (
+            <div style={{ marginBottom: 16, fontSize: 15, fontWeight: 600, color: '#1677ff' }}>
+              预估订单总价：¥{estimatedTotal.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+          )}
+
           <Form.Item>
             <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
               <Button onClick={() => setModalVisible(false)}>取消</Button>
@@ -326,41 +344,14 @@ const Orders: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* 订单详情模态框 */}
-      <Modal
-        title="订单详情"
+      <OrderDetailModal
         open={detailModalVisible}
-        onCancel={() => setDetailModalVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
-            关闭
-          </Button>
-        ]}
-      >
-        {currentOrder && (
-          <div>
-            <p><strong>订单ID:</strong> {currentOrder.display_id || currentOrder.id}</p>
-            <p><strong>老板名称:</strong> {currentOrder.boss_name}</p>
-            <p><strong>打手:</strong> {currentOrder.worker?.name}</p>
-            <p><strong>状态:</strong> {currentOrder.status === 'pending' ? '待结算' : '已完成'}</p>
-            <p><strong>创建时间:</strong> {zhDateTime(currentOrder.create_time)}</p>
-            <p><strong>备注:</strong> {currentOrder.remarks || '-'}</p>
-            
-            <div style={{ marginTop: 20 }}>
-              <h4>订单物资</h4>
-              <Table 
-                dataSource={currentOrder.order_items}
-                rowKey="item_id"
-                pagination={false}
-              >
-                <Table.Column title="物资名称" dataIndex="item" render={(item: Item) => item.item_name} />
-                <Table.Column title="目标数量" dataIndex="target_qty" />
-                <Table.Column title="单价倍率" dataIndex="premium_rate" />
-              </Table>
-            </div>
-          </div>
-        )}
-      </Modal>
+        order={currentOrder}
+        onClose={() => {
+          setDetailModalVisible(false);
+          setCurrentOrder(null);
+        }}
+      />
     </div>
   );
 };

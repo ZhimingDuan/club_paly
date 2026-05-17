@@ -73,6 +73,7 @@ export interface SettlementItem {
   total_value: number;
   club_cut: number;
   worker_pay: number;
+  is_paid: boolean;
   item: Item;
 }
 

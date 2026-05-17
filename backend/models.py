@@ -107,6 +107,7 @@ class SettlementItem(Base):
     total_value = Column(Float, nullable=False)  # 总价值
     club_cut = Column(Float, nullable=False)  # 俱乐部抽成
     worker_pay = Column(Float, nullable=False)  # 打手应得
+    is_paid = Column(Boolean, nullable=False, default=False)  # 是否已向打手结清佣金
     
     # 关联关系
     settlement = relationship("Settlement", back_populates="settlement_items")

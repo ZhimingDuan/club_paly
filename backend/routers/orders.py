@@ -69,7 +69,13 @@ def _attach_display_ids(orders: List[Order], db: Session) -> None:
 
 @router.get("/", response_model=List[OrderSchema], dependencies=[Depends(get_current_user)])
 async def get_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    orders = db.query(Order).offset(skip).limit(limit).all()
+    orders = (
+        db.query(Order)
+        .order_by(Order.create_time.desc(), Order.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     for o in orders:
         o.create_time = _to_beijing(o.create_time)
     _attach_display_ids(orders, db)
